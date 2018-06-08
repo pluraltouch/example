@@ -12,6 +12,8 @@
 
 var target = Argument("target", "default");
 var configuration = Argument("configuration", "Debug");
+var gitUserName = Argument("git-username", "<username>");
+var gitPassword = Argument("git-password", "******");
 
 //////////////////////////////////////////////////////////////////////
 // PREPARATION
@@ -39,12 +41,19 @@ Task("git-pull")
     .Does(() =>
 {
     // Note: The repo should not have uncommitted changes for this operation to work:
-    // GitCheckout(repositoryFolder, "develop", new FilePath[0]);
-    GitPull(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au");
+    // Note: Object [develop] must be known in the local git config, so the original clone must clone that branch (too)
+    // It turned out that the following lines will silently overwrite local changes, so checnking before:
+
+    if (GitHasUncommitedChanges(repositoryFolder))
+    {
+        throw new Exception($"Repository '{repositoryFolder}' has uncommitted changes. Please commit befores pulling");
+    }
+    GitCheckout(repositoryFolder, "develop", new FilePath[0]);
+    GitPull(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", gitUserName, gitPassword, "origin");
 });
 
 Task("clean-all")
-    //.IsDependentOn("git-pull")
+    .IsDependentOn("git-pull")
     .Does(() =>
 
 {
@@ -131,7 +140,8 @@ Task("git-commit")
     .IsDependentOn("run-unit-tests")
     .Does(() =>
 {
-        GitAddAll(repositoryFolder);
+        //GitAddAll(repositoryFolder);
+        GitUnstageAll(repositoryFolder);
         GitCommit(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", "Commit done by an automated Cake script");
 });
 
@@ -139,7 +149,7 @@ Task("git-push")
     .IsDependentOn("git-commit")
     .Does(() =>
 {
-        GitPush(repositoryFolder);
+    GitPush(repositoryFolder, gitUserName, gitPassword);
 });
 
 //////////////////////////////////////////////////////////////////////

@@ -1,3 +1,5 @@
+// Must be added because of common.cake
+#addin nuget:?package=Cake.Git&version=0.16.1&loaddependencies=true
 #tool nuget:?package=NUnit.ConsoleRunner&version=3.4.0
 
 // Common definitions

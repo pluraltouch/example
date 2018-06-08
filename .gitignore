@@ -63,3 +63,5 @@ Thumbs.db
 
 # NUnit
 TestResult.xml
+/src/.vs/Example/v15/Server/sqlite3
+/src/codealike.json

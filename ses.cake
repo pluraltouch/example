@@ -106,7 +106,7 @@ Task("git-push")
     .IsDependentOn("git-commit")
     .Does(() =>
 {
-    GitPullTask(repositoryFolder, gitUserName, gitPassword);
+    GitPushTask(repositoryFolder, gitUserName, gitPassword);
 });
 
 //////////////////////////////////////////////////////////////////////

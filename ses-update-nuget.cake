@@ -27,7 +27,6 @@ var outputFolder = repositoryFolder + "/output";
 
 
 Task("restore-nuget")
-    .IsDependentOn("clean-all")
     .Does(() =>
 {
     RestoreNuGetTask(repositoryFolder);

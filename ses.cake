@@ -143,7 +143,7 @@ Task("run-unit-tests")
 
 
 Task("git-commit")
-    //.IsDependentOn("run-unit-tests")
+    .IsDependentOn("run-unit-tests")
     .Does(() =>
 {
     GitAddAll(repositoryFolder);

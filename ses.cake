@@ -4,12 +4,16 @@
 // Note #2: Cake.Git: We must use older version of Cake.Git because of internal incompatibility with LibGit2Sharp  
 // error CS0029: Cannot implicitly convert type 'System.Collections.Generic.List<LibGit2Sharp.Tag>' to 'System.Collections.Generic.List<LibGit2Sharp.Tag>'
 #addin nuget:?package=Cake.Git&version=0.16.1&loaddependencies=true
-
 #tool nuget:?package=NUnit.ConsoleRunner&version=3.4.0
+
+// Common definitions
+#load common.cake
+
+
+
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
-
 var target = Argument("target", "default");
 var configuration = Argument("configuration", "Debug");
 var gitUserName = Argument("git-username", "<username>");
@@ -21,10 +25,10 @@ var doPull = Argument("do-pull", false);
 //////////////////////////////////////////////////////////////////////
 
 // Define directories.
-var repositoryFolder = Directory(".");
+var repositoryFolder = ".";
     
-// TODO: Not hardcode outputfolder(s), instead infer from the projects (*.csproj files)
-var outputFolder = repositoryFolder + Directory("output");
+// TODO: Do not hardcode outputfolder(s), instead infer from the projects (*.csproj files) This currently in category overkill.
+var outputFolder = repositoryFolder + "/output";
 
 //////////////////////////////////////////////////////////////////////
 // TASKS
@@ -33,9 +37,7 @@ var outputFolder = repositoryFolder + Directory("output");
 Task("clean")
     .Does(() =>
 {
-    CleanDirectory(outputFolder.Path + configuration);
-    CleanDirectories(repositoryFolder.Path +  "/**/bin/" + configuration);
-    CleanDirectories(repositoryFolder.Path + "/**/obj/" + configuration);    
+    CleanTask(outputFolder, configuration);
 });
 
 Task("git-pull")
@@ -63,11 +65,11 @@ Task("clean-all")
     .Does(() =>
 
 {
-    CleanDirectory(outputFolder.Path);
-    CleanDirectories(repositoryFolder.Path +  "/**/bin");
-    CleanDirectories(repositoryFolder.Path + "/**/obj");    
-    CleanDirectories(repositoryFolder.Path + "/**/packages");    
-    CleanDirectories(repositoryFolder.Path + "/lib");        
+    CleanDirectory(outputFolder);
+    CleanDirectories(repositoryFolder +  "/**/bin");
+    CleanDirectories(repositoryFolder + "/**/obj");    
+    CleanDirectories(repositoryFolder + "/**/packages");    
+    CleanDirectories(repositoryFolder + "/lib");        
 });
 
 Task("restore-nuget")
@@ -75,7 +77,7 @@ Task("restore-nuget")
     .Does(() =>
 {
     // Get all solutions (usualy the One)
-    var solutions = GetFiles(repositoryFolder.Path + "/**/*.sln");
+    var solutions = GetFiles(repositoryFolder + "/**/*.sln");
 
     // Use custom restore settings:
     var restoreSettings = new NuGetRestoreSettings {
@@ -83,7 +85,7 @@ Task("restore-nuget")
     };
     
     // Take any special settings in effect * if any *, but not in a hardcoded way (for example the usual SES repositoryPath)
-    var configFile = GetFiles(repositoryFolder.Path + "/**/nuget.config").FirstOrDefault();
+    var configFile = GetFiles(repositoryFolder + "/**/nuget.config").FirstOrDefault();
     if (configFile != null)
     {
         restoreSettings.ConfigFile = configFile;
@@ -98,7 +100,7 @@ Task("update-nuget")
     .Does(() =>
 {
     // Get all solutions (usualy the One)
-    var solutions = GetFiles(repositoryFolder.Path + "/**/*.sln");
+    var solutions = GetFiles(repositoryFolder + "/**/*.sln");
 
     // Update the packages
     // Use custom settings:
@@ -113,7 +115,7 @@ Task("build")
     .IsDependentOn("update-nuget")
     .Does(() =>
 {
-     var solutions = GetFiles(repositoryFolder.Path + "/**/*.sln");
+     var solutions = GetFiles(repositoryFolder + "/**/*.sln");
      foreach(var solution in solutions)
      {
         MSBuild(solution, settings => settings.SetConfiguration(configuration));
@@ -125,8 +127,8 @@ Task("run-unit-tests")
     .Does(() =>
 {
     var folders = new []{
-        outputFolder.Path + configuration + "/*.Tests.dll",
-        outputFolder.Path + configuration + "/*.Test.dll",
+        outputFolder + configuration + "/*.Tests.dll",
+        outputFolder + configuration + "/*.Test.dll",
         // For non SES conform projects:        
         "./**/bin/" + configuration + "/*.Tests.dll",
         "./**/bin/" + configuration + "/*.Test.dll"

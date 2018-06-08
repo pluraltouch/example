@@ -14,6 +14,7 @@ var target = Argument("target", "default");
 var configuration = Argument("configuration", "Debug");
 var gitUserName = Argument("git-username", "<username>");
 var gitPassword = Argument("git-password", "******");
+var doPull = Argument("do-pull", false);
 
 //////////////////////////////////////////////////////////////////////
 // PREPARATION
@@ -40,13 +41,18 @@ Task("clean")
 Task("git-pull")
     .Does(() =>
 {
+    if (!doPull)
+    {
+        Information("Skipping pull because --do-pull option was not presented.");
+        return;
+    }
     // Note: The repo should not have uncommitted changes for this operation to work:
     // Note: Object [develop] must be known in the local git config, so the original clone must clone that branch (too)
     // It turned out that the following lines will silently overwrite local changes, so checnking before:
 
     if (GitHasUncommitedChanges(repositoryFolder))
     {
-        throw new Exception($"Repository '{repositoryFolder}' has uncommitted changes. Please commit befores pulling");
+        throw new Exception($"Repository '{repositoryFolder}' has uncommitted changes. Please commit before pulling");
     }
     GitCheckout(repositoryFolder, "develop", new FilePath[0]);
     GitPull(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", gitUserName, gitPassword, "origin");
@@ -137,12 +143,21 @@ Task("run-unit-tests")
 
 
 Task("git-commit")
-    .IsDependentOn("run-unit-tests")
+    //.IsDependentOn("run-unit-tests")
     .Does(() =>
 {
-        //GitAddAll(repositoryFolder);
-        GitUnstageAll(repositoryFolder);
+    GitAddAll(repositoryFolder);
+
+    // If there are no chanches, commit will cause exception, so prevent it:
+    if (GitHasUncommitedChanges(repositoryFolder))
+    {
         GitCommit(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", "Commit done by an automated Cake script");
+    }
+    else
+    {
+        Information("There were no uncommitted changes to commit");
+    }
+    
 });
 
 Task("git-push")

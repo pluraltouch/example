@@ -6,21 +6,15 @@
 // PREPARATION
 //////////////////////////////////////////////////////////////////////
 
-// Defining folder(s)
-var sourceFolder = Directory("./source");
-class RepositoryInfo {
-    public string CloneUrl {get; set; }
-    public string GitUrl {get; set; }
-}
 
-public void CleanTask(string outputFolder, string configuration)
+public void CleanTask(string outputFolder, string repositoryFolder, string configuration)
 {
     CleanDirectory(outputFolder + configuration);
     CleanDirectories(repositoryFolder + "/**/bin/" + configuration);
     CleanDirectories(repositoryFolder + "/**/obj/" + configuration);    
 }
 
-public void CleanAllTask(string outputFolder, string configuration)
+public void CleanAllTask(string outputFolder, string repositoryFolder)
 {
     CleanDirectory(outputFolder);
     CleanDirectories(repositoryFolder +  "/**/bin");
@@ -30,7 +24,7 @@ public void CleanAllTask(string outputFolder, string configuration)
 
 }
 
-public void GitPullTask(string repositoryFolder)
+public void GitPullTask(string repositoryFolder, string gitUserName, string gitPassword)
 {
     // Note: The repo should not have uncommitted changes for this operation to work:
     // Note: Object [develop] must be known in the local git config, so the original clone must clone that branch (too)
@@ -79,7 +73,7 @@ public void UpdateNuGetTask(string repositoryFolder)
     NuGetUpdate(solutions, updateSettings);                
 }
 
-public void BuildTask(string reposiroryFolder, string configuration)
+public void BuildTask(string repositoryFolder, string configuration)
 {
      var solutions = GetFiles(repositoryFolder + "/**/*.sln");
      foreach(var solution in solutions)
@@ -126,11 +120,3 @@ public void GitPushTask(string repositoryFolder, string gitUserName, string gitP
 {
     GitPush(repositoryFolder, gitUserName, gitPassword);
 }
-
-
-public string GetRepositoryFolder(string cloneUrl)
-{
-    var split = cloneUrl.Replace(".git", "").Split('/', '\\');
-    return split.LastOrDefault()?? "created-"+ DateTime.Now.ToString("{yyyy-MM-dd-HH-mm-ss-fff}");
-}
-

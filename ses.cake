@@ -37,7 +37,7 @@ var outputFolder = repositoryFolder + "/output";
 Task("clean")
     .Does(() =>
 {
-    CleanTask(outputFolder, configuration);
+    CleanTask(outputFolder, repositoryFolder, configuration);
 });
 
 Task("git-pull")
@@ -52,12 +52,8 @@ Task("git-pull")
     // Note: Object [develop] must be known in the local git config, so the original clone must clone that branch (too)
     // It turned out that the following lines will silently overwrite local changes, so checnking before:
 
-    if (GitHasUncommitedChanges(repositoryFolder))
-    {
-        throw new Exception($"Repository '{repositoryFolder}' has uncommitted changes. Please commit before pulling");
-    }
-    GitCheckout(repositoryFolder, "develop", new FilePath[0]);
-    GitPull(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", gitUserName, gitPassword, "origin");
+    GitPullTask(repositoryFolder, gitUserName, gitPassword);
+
 });
 
 Task("clean-all")
@@ -65,82 +61,37 @@ Task("clean-all")
     .Does(() =>
 
 {
-    CleanDirectory(outputFolder);
-    CleanDirectories(repositoryFolder +  "/**/bin");
-    CleanDirectories(repositoryFolder + "/**/obj");    
-    CleanDirectories(repositoryFolder + "/**/packages");    
-    CleanDirectories(repositoryFolder + "/lib");        
+    CleanAllTask(outputFolder, repositoryFolder);
 });
 
 Task("restore-nuget")
     .IsDependentOn("clean-all")
     .Does(() =>
 {
-    // Get all solutions (usualy the One)
-    var solutions = GetFiles(repositoryFolder + "/**/*.sln");
-
-    // Use custom restore settings:
-    var restoreSettings = new NuGetRestoreSettings {
-        // This is the place to add custom settings:
-    };
-    
-    // Take any special settings in effect * if any *, but not in a hardcoded way (for example the usual SES repositoryPath)
-    var configFile = GetFiles(repositoryFolder + "/**/nuget.config").FirstOrDefault();
-    if (configFile != null)
-    {
-        restoreSettings.ConfigFile = configFile;
-    }
-
-    // Restore the packages
-    NuGetRestore(solutions, restoreSettings);
+    RestoreNuGetTask(repositoryFolder);
 });
 
 Task("update-nuget")
     .IsDependentOn("restore-nuget")
     .Does(() =>
 {
-    // Get all solutions (usualy the One)
-    var solutions = GetFiles(repositoryFolder + "/**/*.sln");
-
-    // Update the packages
-    // Use custom settings:
-    var updateSettings = new NuGetUpdateSettings {
-        // This is the place to add custom settings:
-        Prerelease = false
-    };
-    NuGetUpdate(solutions, updateSettings);                
+    UpdateNuGetTask(repositoryFolder);
 });
 
 Task("build")
     .IsDependentOn("update-nuget")
     .Does(() =>
 {
-     var solutions = GetFiles(repositoryFolder + "/**/*.sln");
-     foreach(var solution in solutions)
-     {
-        MSBuild(solution, settings => settings.SetConfiguration(configuration));
-     }
+    BuildTask(repositoryFolder, configuration);
+
 });
 
 Task("run-unit-tests")
     .IsDependentOn("build")
     .Does(() =>
 {
-    var folders = new []{
-        outputFolder + configuration + "/*.Tests.dll",
-        outputFolder + configuration + "/*.Test.dll",
-        // For non SES conform projects:        
-        "./**/bin/" + configuration + "/*.Tests.dll",
-        "./**/bin/" + configuration + "/*.Test.dll"
-    };
+    RunUnitTestsTask(outputFolder, configuration);
 
-    foreach(var folder in folders)
-    {
-    NUnit3(folder, new NUnit3Settings {
-        NoResults = true
-        });
-
-    }
 });
 
 
@@ -148,25 +99,14 @@ Task("git-commit")
     .IsDependentOn("run-unit-tests")
     .Does(() =>
 {
-    GitAddAll(repositoryFolder);
-
-    // If there are no chanches, commit will cause exception, so prevent it:
-    if (GitHasUncommitedChanges(repositoryFolder))
-    {
-        GitCommit(repositoryFolder, "ses.cake.merger", "ses.cake.merger@msesolutions.net.au", "Commit done by an automated Cake script");
-    }
-    else
-    {
-        Information("There were no uncommitted changes to commit");
-    }
-    
+    GitCommitTask(repositoryFolder) ;
 });
 
 Task("git-push")
     .IsDependentOn("git-commit")
     .Does(() =>
 {
-    GitPush(repositoryFolder, gitUserName, gitPassword);
+    GitPullTask(repositoryFolder, gitUserName, gitPassword);
 });
 
 //////////////////////////////////////////////////////////////////////
